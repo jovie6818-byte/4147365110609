@@ -1,7 +1,7 @@
 // ==========================================
 // 綠動未來：手勢感應海洋淨化大作戰
 // 開發者：414736511_張又瑄
-// [UX 優化版：加入開頭偵測預覽 + 響應式全螢幕架構]
+// [UX 優化版：響應式全螢幕 + AR 半透明視訊背景]
 // ==========================================
 
 let video;
@@ -62,7 +62,7 @@ function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
 
-// 點擊畫面任意處即可切換/退出全螢幕模式 (瀏覽器安全性限制需由使用者主動觸發)
+// 點擊畫面任意處即可切換/退出全螢幕模式
 function mousePressed() {
   if (gameState === 'START') {
     let fs = fullscreen();
@@ -88,23 +88,39 @@ function draw() {
   handleParticles();
 }
 
+// 全新的背景渲染函數：AR 鏡頭半透明海洋風格
 function drawOceanBackground() {
+  // 1. 繪製鏡像的視訊畫面作為最底層
+  push();
+  translate(width, 0); // 水平位移到右側
+  scale(-1, 1);        // 鏡像翻轉，讓畫面跟現實動作完全同步
+  // 將視訊拉伸填滿全螢幕畫布
+  image(video, 0, 0, width, height); 
+  pop();
+
+  // 2. 疊加半透明的深藍色遮罩，讓攝影機畫面變成「半透明底圖」
+  fill(15, 23, 42, 180); // 180 是透明度，覺得太暗或太亮可以調這個數值
+  rectMode(CORNER);
+  rect(0, 0, width, height);
+
+  // 3. 保留原本的裝飾性波浪氣泡，維持水下氛圍
   noStroke();
-  for (let i = 0; i < height; i++) {
-    let inter = map(i, 0, height, 0, 1);
-    let c = lerpColor(color('#0f172a'), color('#1e3a8a'), inter);
-    stroke(c);
-    line(0, i, width, i);
+  fill(255, 255, 255, 30);
+  for (let i = 0; i < 5; i++) {
+    let bubbleX = (noise(frameCount * 0.005 + i * 100) * width);
+    let bubbleY = ((frameCount + i * 120) % height);
+    ellipse(bubbleX, height - bubbleY, 15 + i * 3);
   }
 }
 
 function drawStartScreen() {
-  fill(15, 23, 42, 200);
+  // 讓開頭畫面的遮罩再稍微深一點點，確保文字好讀
+  fill(15, 23, 42, 100);
   rect(0, 0, width, height);
 
   textAlign(CENTER, CENTER);
   fill(34, 197, 94);
-  textSize(42); // 全螢幕字體稍微放大
+  textSize(42);
   textStyle(BOLD);
   text("綠動未來：手勢感應海洋淨化大作戰", width / 2, height / 2 - 100);
   
@@ -128,7 +144,7 @@ function drawStartScreen() {
   // --- 右上角偵測預覽小螢幕 ---
   let panelW = 200;
   let panelH = 150;
-  let panelX = width - panelW - 30; // 邊距拉開一點
+  let panelX = width - panelW - 30; 
   let panelY = 30;
   let panelRadius = 8;
   fill(0, 150); 
@@ -144,7 +160,6 @@ function drawStartScreen() {
   
   translate(panelX + panelW, panelY); 
   scale(-1, 1); 
-  // 繪製視訊，適應小螢幕尺寸
   image(video, 0, 0, panelW, panelH);
   
   if (predictions.length > 0) {
@@ -153,7 +168,6 @@ function drawStartScreen() {
     
     for (let j = 0; j < landmarks.length; j++) {
       let keypoint = landmarks[j];
-      // 依據原始 VIDEO 尺寸進行比例換算
       let lx = (keypoint[0] / VIDEO_W) * panelW;
       let ly = (keypoint[1] / VIDEO_H) * panelH;
       fill(34, 197, 94); 
@@ -179,7 +193,7 @@ function drawStartScreen() {
   noStroke();
   textSize(14);
   textAlign(LEFT, TOP);
-  text("📷 AI 偵測預覽", panelX + 10, panelY + 10);
+  text("📷 AI 偵測骨架", panelX + 10, panelY + 10);
   if (isHandDetected) {
     fill(34, 197, 94);
     ellipse(panelX + panelW - 20, panelY + 18, 10); 
@@ -212,7 +226,7 @@ function runGameLogic() {
   if (predictions.length > 0) {
     let landmarks = predictions[0].landmarks;
     
-    // 【核心優化】將 640x480 的座標，映射(map)放大到全螢幕尺寸，並維持水平鏡像
+    // 將 640x480 的座標，映射(map)放大到全螢幕尺寸，並維持水平鏡像
     let targetX = map(landmarks[8][0], 0, VIDEO_W, width, 0); 
     let targetY = map(landmarks[8][1], 0, VIDEO_H, 0, height);
     
@@ -245,7 +259,7 @@ function runGameLogic() {
     }
 
     let d = dist(pointerX, pointerY, t.x, t.y);
-    if (d < t.type.size / 2 + 40) { // 全螢幕下判定範圍稍微放寬
+    if (d < t.type.size / 2 + 40) { 
       createExplosion(t.x, t.y);
       score += 10;
       trashItems.splice(i, 1);
@@ -256,7 +270,6 @@ function runGameLogic() {
     noFill();
     stroke(34, 197, 94, 150 + sin(frameCount * 0.1) * 50);
     strokeWeight(3);
-    // 全螢幕下光圈放大
     ellipse(pointerX, pointerY, 80 + sin(frameCount * 0.1) * 5); 
     
     fill(34, 197, 94, 200);
@@ -274,7 +287,6 @@ function runGameLogic() {
     text("⚠️ 未偵測到手掌，請將手舉至胸前", width / 2, 60);
   }
 
-  // 頂部 UI 面板全寬度適應
   fill(15, 23, 42, 180);
   rectMode(CORNER);
   rect(0, 0, width, 60);
@@ -297,10 +309,10 @@ function runGameLogic() {
 function generateTrash() {
   let type = random(trashTypes);
   trashItems.push({
-    x: random(100, width - 100), // 避免生成在太靠螢幕邊緣
+    x: random(100, width - 100), 
     y: -30,
     type: type,
-    speedY: random(2, 4.5), // 螢幕變大，落下速度稍微加快以維持節奏
+    speedY: random(2, 4.5), 
     seed: random(1000)
   });
 }
@@ -313,7 +325,7 @@ function createExplosion(x, y) {
       vx: random(-4, 4),
       vy: random(-4, 4),
       alpha: 255,
-      size: random(8, 16) // 粒子放大
+      size: random(8, 16) 
     });
   }
 }
@@ -337,6 +349,7 @@ function handleParticles() {
 }
 
 function drawGameOverScreen() {
+  // 結算畫面也上一個稍微深一點的遮罩
   fill(15, 23, 42, 200);
   rect(0, 0, width, height);
 
