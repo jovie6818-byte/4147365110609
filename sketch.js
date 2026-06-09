@@ -122,7 +122,7 @@ function drawStartScreen() {
   fill(34, 197, 94);
   textSize(42);
   textStyle(BOLD);
-  text("綠動未來：手勢感應海洋淨化大作戰", width / 2, height / 2 - 100);
+  text("手勢感應消消樂大作戰", width / 2, height / 2 - 100);
   
   textStyle(NORMAL);
   fill(255);
